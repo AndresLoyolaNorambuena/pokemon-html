@@ -1,109 +1,39 @@
 <!DOCTYPE html>
-<html lang="en">
-	<head>
-		<meta charset="UTF-8" />
-		<meta http-equiv="X-UA-Compatible" content="IE=edge" />
-		<meta
-			name="viewport"
-			content="width=device-width, initial-scale=1.0"
-		/>
-		<title>Pokemon</title>
-		<link rel="stylesheet" href="styles.css" />
-	</head>
-	<body>
-		<header class="container">
-			<a href="index.html" class="logo">
-				<img src="img/pokedex_logo.png"/>
-			</a>
-			<form>
-				<div class="form-group">
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						fill="none"
-						viewBox="0 0 24 24"
-						stroke-width="1.5"
-						stroke="currentColor"
-						class="icon-search"
-					>
-						<path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"
-						/>
-					</svg>
-					<input
-						type="search"
-						placeholder="Buscar nombre de Pokemon"
-					/>
-				</div>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pokémon</title>
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body class="pokemon-page">
 
-				<button class="btn-search">Buscar</button>
-			</form>
-		</header>
+    <header class="container">
+        <a href="index.html" class="logo">
+            <img src="https://raw.githubusercontent.com/PokeAPI/media/master/logo/pokeapi_256.png" alt="Pokédex" />
+        </a>
+        <a href="index.html" class="btn-back">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" width="20" height="20">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18"/>
+            </svg>
+            Volver al Pokédex
+        </a>
+    </header>
 
-		<main class="container main-pokemon">
-			<div class="header-main-pokemon">
-				<span class="number-pokemon">#1</span>
-				<div class="container-img-pokemon">
-					<img
-						src="https://assets.pokemon.com/assets/cms2/img/pokedex/detail/001.png"
-						alt="pokemon bulbasaur"
-					/>
-				</div>
-
-				<div class="container-info-pokemon">
-					<h1>Bulbasaur</h1>
-					<div class="card-types">
-						<span class="grass">Planta</span>
-					</div>
-					<div class="info-pokemon">
-						<div class="group-info">
-							<p>Altura</p>
-							<span>0.7m</span>
-						</div>
-						<div class="group-info">
-							<p>Peso</p>
-							<span>6.9Kg</span>
-						</div>
-					</div>
-				</div>
-			</div>
-
-			<div class="container-stats">
-                <h1>Estadísticas</h1>
-                <div class="stats">
-                    <div class="stat-group">
-                        <span>Hp</span>
-                        <div class="progress-bar"></div>
-                        <span class="counter-stat">45</span>
-                    </div>
-                    <div class="stat-group">
-                        <span>Attack</span>
-                        <div class="progress-bar"></div>
-                        <span class="counter-stat">49</span>
-                    </div>
-                    <div class="stat-group">
-                        <span>Defense</span>
-                        <div class="progress-bar"></div>
-                        <span class="counter-stat">49</span>
-                    </div>
-                    <div class="stat-group">
-                        <span>Special Attack</span>
-                        <div class="progress-bar"></div>
-                        <span class="counter-stat">65</span>
-                    </div>
-                    <div class="stat-group">
-                        <span>Special Defense</span>
-                        <div class="progress-bar"></div>
-                        <span class="counter-stat">65</span>
-                    </div>
-                    <div class="stat-group">
-                        <span>Speed</span>
-                        <div class="progress-bar"></div>
-                        <span class="counter-stat">45</span>
-                    </div>
-                </div>
+    <main class="container main-pokemon" id="pokemon-detail">
+        <!-- Loading state -->
+        <div class="detail-loading">
+            <div class="skeleton-detail-img"></div>
+            <div class="skeleton-detail-info">
+                <div class="skeleton-line wide"></div>
+                <div class="skeleton-line medium"></div>
+                <div class="skeleton-line short"></div>
             </div>
-		</main>
-	</body>
+        </div>
+    </main>
+
+    <script src="pokemon.js"></script>
+</body>
 </html>
