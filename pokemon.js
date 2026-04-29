@@ -1,10 +1,11 @@
 // ============================================
-// POKÉDEX — pokemon.js (Detail Page)
+// POKÉDEX — pokemon.js (Página de detalle)
 // ============================================
 
 const API_BASE = 'https://pokeapi.co/api/v2';
 
-const TYPE_NAMES_ES = {
+// Nombres de tipos en español
+const NOMBRES_TIPOS_ES = {
     fire: 'Fuego', water: 'Agua', grass: 'Planta', electric: 'Eléctrico',
     ice: 'Hielo', fighting: 'Lucha', poison: 'Veneno', ground: 'Tierra',
     flying: 'Volador', psychic: 'Psíquico', bug: 'Bicho', rock: 'Roca',
@@ -12,7 +13,8 @@ const TYPE_NAMES_ES = {
     fairy: 'Hada', normal: 'Normal', shadow: 'Sombra', unknown: 'Desconocido'
 };
 
-const STAT_NAMES_ES = {
+// Nombres de estadísticas en español
+const NOMBRES_STATS_ES = {
     hp: 'HP',
     attack: 'Ataque',
     defense: 'Defensa',
@@ -21,8 +23,8 @@ const STAT_NAMES_ES = {
     speed: 'Velocidad'
 };
 
-// Type background colors for hero
-const TYPE_GRADIENTS = {
+// Gradientes de color para el héroe según el tipo primario
+const GRADIENTES_TIPO = {
     fire:     'linear-gradient(135deg, #ff7402, #ff4400)',
     water:    'linear-gradient(135deg, #4592c4, #1a6fa8)',
     grass:    'linear-gradient(135deg, #78c850, #4a9c28)',
@@ -43,34 +45,42 @@ const TYPE_GRADIENTS = {
     normal:   'linear-gradient(135deg, #a4acaf, #7a8a8f)',
 };
 
-// Stat color based on value
-function getStatColor(value) {
-    if (value >= 100) return '#4caf50';
-    if (value >= 75)  return '#8bc34a';
-    if (value >= 50)  return '#ffc107';
-    if (value >= 25)  return '#ff9800';
+// ============================================
+// UTILIDADES
+// ============================================
+
+// Devuelve un color según el valor de la estadística
+function colorStat(valor) {
+    if (valor >= 100) return '#4caf50';
+    if (valor >= 75)  return '#8bc34a';
+    if (valor >= 50)  return '#ffc107';
+    if (valor >= 25)  return '#ff9800';
     return '#f44336';
 }
 
-function formatId(id) {
+// Formatea el ID con ceros a la izquierda (ej: 1 → "001")
+function formatearId(id) {
     return String(id).padStart(3, '0');
 }
 
-function capitalize(str) {
+// Capitaliza la primera letra y reemplaza guiones por espacios
+function capitalizar(str) {
     return str.charAt(0).toUpperCase() + str.slice(1).replace(/-/g, ' ');
 }
 
 // ============================================
-// FETCH
+// PETICIONES A LA POKEAPI
 // ============================================
 
-async function fetchPokemon(id) {
+// Obtiene los datos principales de un Pokémon por su ID
+async function obtenerPokemon(id) {
     const res = await fetch(`${API_BASE}/pokemon/${id}`);
     if (!res.ok) throw new Error(`Pokémon #${id} no encontrado`);
     return res.json();
 }
 
-async function fetchSpecies(id) {
+// Obtiene los datos de especie (incluye descripciones e idiomas)
+async function obtenerEspecie(id) {
     try {
         const res = await fetch(`${API_BASE}/pokemon-species/${id}`);
         if (!res.ok) return null;
@@ -81,81 +91,92 @@ async function fetchSpecies(id) {
 }
 
 // ============================================
-// RENDER DETAIL
+// RENDERIZADO DE LA PÁGINA DE DETALLE
 // ============================================
 
-async function renderPokemonDetail(pokemon, species) {
-    const detail = document.getElementById('pokemon-detail');
-    const types = pokemon.types.map(t => t.type.name);
-    const primaryType = types[0];
-    const gradient = TYPE_GRADIENTS[primaryType] || 'linear-gradient(135deg, #a4acaf, #7a8a8f)';
+async function renderizarDetalle(pokemon, especie) {
+    const contenedor = document.getElementById('pokemon-detail');
+    const tipos = pokemon.types.map(t => t.type.name);
+    const tipoPrimario = tipos[0];
+    const gradiente = GRADIENTES_TIPO[tipoPrimario] || 'linear-gradient(135deg, #a4acaf, #7a8a8f)';
 
-    // Get description in Spanish or English
-    let description = '';
-    if (species) {
-        const entry = species.flavor_text_entries.find(e => e.language.name === 'es')
-            || species.flavor_text_entries.find(e => e.language.name === 'en');
-        if (entry) {
-            description = entry.flavor_text.replace(/\f/g, ' ').replace(/\n/g, ' ');
+    // Obtener descripción: primero en español, luego en inglés como fallback
+    let descripcion = '';
+    if (especie) {
+        const entrada = especie.flavor_text_entries.find(e => e.language.name === 'es')
+            || especie.flavor_text_entries.find(e => e.language.name === 'en');
+        if (entrada) {
+            let textoDesc = entrada.flavor_text.replace(/\f/g, ' ').replace(/\n/g, ' ');
+
+            // Si el texto viene en inglés, lo traducimos con Claude
+            if (entrada.language.name === 'en') {
+                textoDesc = await traducir(textoDesc);
+            }
+            descripcion = textoDesc;
         }
     }
 
-    // Image
-    const imgUrl = pokemon.sprites.other['official-artwork'].front_default
+    // URL de la imagen oficial del artwork
+    const urlImagen = pokemon.sprites.other['official-artwork'].front_default
         || pokemon.sprites.front_default;
 
-    // Types HTML
-    const typesHtml = types.map(t =>
-        `<span class="${t}">${TYPE_NAMES_ES[t] || t}</span>`
+    // HTML de los tipos del Pokémon
+    const htmlTipos = tipos.map(t =>
+        `<span class="${t}">${NOMBRES_TIPOS_ES[t] || t}</span>`
     ).join('');
 
-    // Stats HTML
-    const statsHtml = pokemon.stats.map(s => {
-        const statName = STAT_NAMES_ES[s.stat.name] || capitalize(s.stat.name);
-        const value = s.base_stat;
-        const pct = Math.min((value / 150) * 100, 100);
-        const color = getStatColor(value);
+    // Traducir todos los nombres de habilidades en paralelo (una sola llamada a la API)
+    const nombresHabilidades = pokemon.abilities.map(a => a.ability.name);
+    const habilidadesTraducidas = await traducirHabilidades(nombresHabilidades);
+
+    // HTML de las estadísticas base con barras de progreso animadas
+    const htmlStats = pokemon.stats.map(s => {
+        const nombreStat = NOMBRES_STATS_ES[s.stat.name] || capitalizar(s.stat.name);
+        const valor = s.base_stat;
+        const porcentaje = Math.min((valor / 150) * 100, 100);
+        const color = colorStat(valor);
         return `
             <div class="stat-group">
-                <span class="stat-name">${statName}</span>
+                <span class="stat-name">${nombreStat}</span>
                 <div class="progress-bar-wrapper">
-                    <div class="progress-bar" data-value="${pct}" style="background:${color}"></div>
+                    <div class="progress-bar" data-value="${porcentaje}" style="background:${color}"></div>
                 </div>
-                <span class="stat-value">${value}</span>
+                <span class="stat-value">${valor}</span>
             </div>
         `;
     }).join('');
 
-    // Abilities HTML
-    const abilitiesHtml = pokemon.abilities.map(a => {
-        const isHidden = a.is_hidden;
-        return `<span class="ability-badge ${isHidden ? 'hidden' : ''}">${capitalize(a.ability.name)}${isHidden ? ' (Oculta)' : ''}</span>`;
+    // HTML de las habilidades (con badge especial si es habilidad oculta)
+    const htmlHabilidades = pokemon.abilities.map((a, i) => {
+        const esOculta = a.is_hidden;
+        const nombreTraducido = habilidadesTraducidas[i];
+        return `<span class="ability-badge ${esOculta ? 'hidden' : ''}">${nombreTraducido}${esOculta ? ' (Oculta)' : ''}</span>`;
     }).join('');
 
-    // Height / Weight
-    const heightM = (pokemon.height / 10).toFixed(1);
-    const weightKg = (pokemon.weight / 10).toFixed(1);
+    // Convertir altura y peso a unidades legibles
+    const alturaM = (pokemon.height / 10).toFixed(1);
+    const pesoKg = (pokemon.weight / 10).toFixed(1);
 
-    // Build HTML
-    detail.innerHTML = `
-        <div class="pokemon-hero" style="background: ${gradient};">
+    // Construir el HTML completo de la página de detalle
+    contenedor.innerHTML = `
+        <div class="pokemon-hero" style="background: ${gradiente};">
             <div class="pokemon-hero-ball"></div>
             <div class="pokemon-img-wrapper">
-                <img src="${imgUrl}" alt="${pokemon.name}" />
+                <img src="${urlImagen}" alt="${pokemon.name}" />
             </div>
             <div class="pokemon-hero-info">
-                <span class="pokemon-number">#${formatId(pokemon.id)}</span>
-                <h1>${capitalize(pokemon.name)}</h1>
-                <div class="pokemon-hero-types">${typesHtml}</div>
-                ${description ? `<p style="opacity:.85; font-size:14px; line-height:1.6; margin-bottom:24px; max-width:400px;">${description}</p>` : ''}
+                <span class="pokemon-number">#${formatearId(pokemon.id)}</span>
+                <h1>${capitalizar(pokemon.name)}</h1>
+                <div class="pokemon-hero-types">${htmlTipos}</div>
+                ${descripcion ? `<p style="opacity:.85; font-size:14px; line-height:1.6; margin-bottom:24px; max-width:400px;">${descripcion}</p>` : ''}
                 <div class="pokemon-meta">
                     <div class="pokemon-meta-item">
                         <span class="label">Altura</span>
-                        <span class="value">${heightM} m</span>
+                        <span class="value">${alturaM} m</span>
                     </div>
                     <div class="pokemon-meta-item">
                         <span class="label">Peso</span>
-                        <span class="value">${weightKg} kg</span>
+                        <span class="value">${pesoKg} kg</span>
                     </div>
                     <div class="pokemon-meta-item">
                         <span class="label">Exp. base</span>
@@ -165,87 +186,91 @@ async function renderPokemonDetail(pokemon, species) {
             </div>
         </div>
 
-        ${await buildNavigation(pokemon.id)}
+        ${await construirNavegacion(pokemon.id)}
 
         <div class="container-stats">
             <h2 class="section-title">Estadísticas base</h2>
-            <div class="stats">${statsHtml}</div>
+            <div class="stats">${htmlStats}</div>
         </div>
 
         <div class="abilities-section">
             <h2 class="section-title">Habilidades</h2>
-            <div class="abilities-list">${abilitiesHtml}</div>
+            <div class="abilities-list">${htmlHabilidades}</div>
         </div>
     `;
 
-    // Update page title
-    document.title = `${capitalize(pokemon.name)} — Pokédex`;
+    // Actualizar el título de la pestaña del navegador
+    document.title = `${capitalizar(pokemon.name)} — Pokédex`;
 
-    // Animate stat bars after render
+    // Animar las barras de estadísticas con un pequeño retraso para el efecto visual
     requestAnimationFrame(() => {
         setTimeout(() => {
-            document.querySelectorAll('.progress-bar[data-value]').forEach(bar => {
-                bar.style.width = bar.dataset.value + '%';
+            document.querySelectorAll('.progress-bar[data-value]').forEach(barra => {
+                barra.style.width = barra.dataset.value + '%';
             });
         }, 100);
     });
 }
 
 // ============================================
-// NAVIGATION (prev / next)
+// NAVEGACIÓN ENTRE POKÉMON (anterior / siguiente)
 // ============================================
 
-async function buildNavigation(currentId) {
-    const prevId = currentId > 1 ? currentId - 1 : null;
-    const nextId = currentId < 151 ? currentId + 1 : null;
+async function construirNavegacion(idActual) {
+    const idAnterior = idActual > 1 ? idActual - 1 : null;
+    const idSiguiente = idActual < 151 ? idActual + 1 : null;
 
-    const [prevData, nextData] = await Promise.all([
-        prevId ? fetchPokemon(prevId).catch(() => null) : Promise.resolve(null),
-        nextId ? fetchPokemon(nextId).catch(() => null) : Promise.resolve(null),
+    // Cargar datos del anterior y siguiente en paralelo
+    const [datosAnterior, datosSiguiente] = await Promise.all([
+        idAnterior ? obtenerPokemon(idAnterior).catch(() => null) : Promise.resolve(null),
+        idSiguiente ? obtenerPokemon(idSiguiente).catch(() => null) : Promise.resolve(null),
     ]);
 
-    const prevHtml = prevData ? `
-        <a href="pokemon.html?id=${prevData.id}" class="pokemon-nav-btn prev">
-            <img src="${prevData.sprites.other['official-artwork'].front_default || prevData.sprites.front_default}" alt="${prevData.name}" />
+    const htmlAnterior = datosAnterior ? `
+        <a href="pokemon.html?id=${datosAnterior.id}" class="pokemon-nav-btn prev">
+            <img src="${datosAnterior.sprites.other['official-artwork'].front_default || datosAnterior.sprites.front_default}" alt="${datosAnterior.name}" />
             <div class="nav-info">
                 <div class="nav-label">← Anterior</div>
-                <div class="nav-name">#${formatId(prevData.id)} ${capitalize(prevData.name)}</div>
+                <div class="nav-name">#${formatearId(datosAnterior.id)} ${capitalizar(datosAnterior.name)}</div>
             </div>
         </a>
     ` : '<div></div>';
 
-    const nextHtml = nextData ? `
-        <a href="pokemon.html?id=${nextData.id}" class="pokemon-nav-btn next">
-            <img src="${nextData.sprites.other['official-artwork'].front_default || nextData.sprites.front_default}" alt="${nextData.name}" />
+    const htmlSiguiente = datosSiguiente ? `
+        <a href="pokemon.html?id=${datosSiguiente.id}" class="pokemon-nav-btn next">
+            <img src="${datosSiguiente.sprites.other['official-artwork'].front_default || datosSiguiente.sprites.front_default}" alt="${datosSiguiente.name}" />
             <div class="nav-info">
                 <div class="nav-label">Siguiente →</div>
-                <div class="nav-name">#${formatId(nextData.id)} ${capitalize(nextData.name)}</div>
+                <div class="nav-name">#${formatearId(datosSiguiente.id)} ${capitalizar(datosSiguiente.name)}</div>
             </div>
         </a>
     ` : '<div></div>';
 
-    return `<div class="pokemon-nav">${prevHtml}${nextHtml}</div>`;
+    return `<div class="pokemon-nav">${htmlAnterior}${htmlSiguiente}</div>`;
 }
 
 // ============================================
-// INIT
+// INICIALIZACIÓN
 // ============================================
 
-async function init() {
+async function iniciar() {
+    // Leer el ID del Pokémon desde los parámetros de la URL
     const params = new URLSearchParams(window.location.search);
     const id = parseInt(params.get('id'));
 
+    // Si no hay ID válido, redirigir al índice
     if (!id || isNaN(id)) {
         window.location.href = 'index.html';
         return;
     }
 
     try {
-        const [pokemon, species] = await Promise.all([
-            fetchPokemon(id),
-            fetchSpecies(id),
+        // Cargar datos del Pokémon y su especie en paralelo
+        const [pokemon, especie] = await Promise.all([
+            obtenerPokemon(id),
+            obtenerEspecie(id),
         ]);
-        await renderPokemonDetail(pokemon, species);
+        await renderizarDetalle(pokemon, especie);
     } catch (err) {
         console.error(err);
         document.getElementById('pokemon-detail').innerHTML = `
@@ -257,4 +282,4 @@ async function init() {
     }
 }
 
-init();
+iniciar();
