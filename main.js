@@ -3,8 +3,8 @@
 // ============================================
 
 const API_BASE = 'https://pokeapi.co/api/v2';
-const TAMAÑO_LOTE = 20;       // Pokémon que se cargan por vez
-const TOTAL_POKEMON = 151;    // Solo Gen 1 (Kanto)
+const TAMAÑO_LOTE = 1025;       // Pokémon que se cargan por lote (todas las generaciones hasta la fecha)
+const TOTAL_POKEMON = 1025;    // todas las generaciones hasta la fecha (incluyendo formas regionales y variantes)
 
 // Nombres de tipos traducidos al español
 const NOMBRES_TIPOS_ES = {
