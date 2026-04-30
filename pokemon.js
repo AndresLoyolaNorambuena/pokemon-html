@@ -218,7 +218,7 @@ async function renderizarDetalle(pokemon, especie) {
 
 async function construirNavegacion(idActual) {
     const idAnterior = idActual > 1 ? idActual - 1 : null;
-    const idSiguiente = idActual < 151 ? idActual + 1 : null;
+    const idSiguiente = idActual < 1025 ? idActual + 1 : null;
 
     // Cargar datos del anterior y siguiente en paralelo
     const [datosAnterior, datosSiguiente] = await Promise.all([
